@@ -1,0 +1,540 @@
+{
+    "nodes": [
+        {
+            "parameters": {},
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [-480, -32],
+            "id": "92f70be9-10a5-4410-9ce3-4ad413722171",
+            "name": "When clicking ‘Execute workflow’"
+        },
+        {
+            "parameters": {
+                "url": "https://api.github.com/repos/Tapha-K/backtesting-Tapha-K/issues/1",
+                "authentication": "predefinedCredentialType",
+                "nodeCredentialType": "githubApi",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [-288, -32],
+            "id": "a4732cf2-ea0e-44be-9266-a55e1ab8c4d4",
+            "name": "Get Prompt 1",
+            "credentials": {
+                "githubApi": {
+                    "id": "XqB4QWpOo5FTfFG2",
+                    "name": "GitHub account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "url": "https://api.github.com/repos/Tapha-K/backtesting-Tapha-K/issues/2",
+                "authentication": "predefinedCredentialType",
+                "nodeCredentialType": "githubApi",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [-96, -32],
+            "id": "5e4d10b9-42b5-4b00-96eb-513311973126",
+            "name": "Get Prompt 2",
+            "credentials": {
+                "githubApi": {
+                    "id": "XqB4QWpOo5FTfFG2",
+                    "name": "GitHub account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// PR 번호 범위를 지정합니다. (현재 90개 정도라면 넉넉히 150까지)\nconst start = 1;\nconst end = 70;\nconst pr_list = [];\n\nfor (let i = start; i <= end; i++) {\n  // 다음 노드에서 쓰기 편하게 json 객체로 만듭니다.\n  pr_list.push({ json: { pr_number: i } });\n}\n\nreturn pr_list;"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [528, 64],
+            "id": "13b54bf9-87ad-4a5a-9661-ed65247c0b29",
+            "name": "Number Generator"
+        },
+        {
+            "parameters": {
+                "options": {
+                    "reset": true
+                }
+            },
+            "type": "n8n-nodes-base.splitInBatches",
+            "typeVersion": 3,
+            "position": [320, -32],
+            "id": "4484138f-5fee-4332-8228-ff580dba19c1",
+            "name": "Repo Loop"
+        },
+        {
+            "parameters": {
+                "options": {
+                    "reset": false
+                }
+            },
+            "type": "n8n-nodes-base.splitInBatches",
+            "typeVersion": 3,
+            "position": [752, 64],
+            "id": "a6366c50-c822-4c30-9066-0d4b9f7050cc",
+            "name": "PR Number Loop"
+        },
+        {
+            "parameters": {
+                "url": "=https://api.github.com/repos/{{ $('Repo Loop').item.json.repositories }}/pulls/{{ $json.pr_number }}",
+                "authentication": "predefinedCredentialType",
+                "nodeCredentialType": "githubApi",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [992, 160],
+            "id": "84ad5052-e80f-45f9-a501-1df582a8aae5",
+            "name": "Check PR Existence",
+            "retryOnFail": false,
+            "maxTries": 5,
+            "credentials": {
+                "githubApi": {
+                    "id": "XqB4QWpOo5FTfFG2",
+                    "name": "GitHub account"
+                }
+            },
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "loose",
+                        "version": 2
+                    },
+                    "conditions": [
+                        {
+                            "id": "63d0535a-81b0-4b1b-9f9b-b60e2156417b",
+                            "leftValue": "={{ $json.url }}",
+                            "rightValue": "",
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "notEmpty",
+                                "singleValue": true
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "looseTypeValidation": true,
+                "options": {}
+            },
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.2,
+            "position": [1216, 160],
+            "id": "c08f9619-b51c-4b8e-b9ba-b0a2039bd60e",
+            "name": "Is Valid PR?"
+        },
+        {
+            "parameters": {
+                "url": "=https://api.github.com/repos/{{ $('Repo Loop').item.json.repositories }}/pulls/{{ $('PR Number Loop').item.json.pr_number }}/reviews",
+                "authentication": "predefinedCredentialType",
+                "nodeCredentialType": "githubApi",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [1440, 144],
+            "id": "062b5eda-efdf-4f69-a9c8-610f2a8117f9",
+            "name": "Mining",
+            "credentials": {
+                "githubApi": {
+                    "id": "XqB4QWpOo5FTfFG2",
+                    "name": "GitHub account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "modelName": "models/gemini-pro-latest",
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+            "typeVersion": 1,
+            "position": [1664, -32],
+            "id": "f0c1d696-d5bc-436c-8a90-3abdd2d3b658",
+            "name": "Google Gemini Chat Model",
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "kgpIrrpkT3FMVq10",
+                    "name": "Google Gemini(PaLM) Api account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "=<System Prompt>\n{{ $('Get Prompt 1').item.json.body }}\n</System Prompt>\n\n<Input Data (Reviews)>\n{{ JSON.stringify($json) }}\n</Input Data (Reviews)>\n\n<Instruction>\n위 System Prompt에 정의된 역할과 규칙에 따라, Input Data(리뷰들)를 분석하여 JSON 포맷으로 기술적 쟁점을 추출해줘.\n</Instruction>",
+                "hasOutputParser": true,
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "typeVersion": 3,
+            "position": [1664, 144],
+            "id": "58c80415-f7b3-4f03-9f28-986837ee69fb",
+            "name": "Miner - Stage 1",
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "jsCode": "// 1. 입력 데이터 가져오기 \nconst items = $input.all();\n\nconst staticData = $getWorkflowStaticData('global');\n\n// 2. 메모리 초기화\nif (!staticData.all_reviews) {\n  staticData.all_reviews = [];\n}\n\n// 3. AI 결과가 있으면 저장 (첫 번째 아이템 확인)\nif (items.length > 0 && items[0].json && items[0].json.output) {\n  \n  let data = items[0].json.output;\n  \n  // 문자열로 들어왔으면 JSON 파싱 시도\n  if (typeof data === 'string') {\n    try { \n      data = JSON.parse(data); \n    } catch(e) {\n      // 파싱 실패 시 무시하거나 에러 로깅\n    }\n  }\n\n  // 배열이면 펼쳐서 넣고, 아니면 그냥 넣기\n  if (Array.isArray(data)) {\n    staticData.all_reviews.push(...data);\n  } else {\n    staticData.all_reviews.push(data);\n  }\n}\n\n// 4. 다음 노드로 데이터 넘기기\nreturn items;"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [2016, 144],
+            "id": "db16a046-2ab4-4b1f-8329-9caf850296d0",
+            "name": "Accumulator"
+        },
+        {
+            "parameters": {
+                "amount": 3
+            },
+            "type": "n8n-nodes-base.wait",
+            "typeVersion": 1.1,
+            "position": [2240, 144],
+            "id": "dcde3bd6-df53-43ba-9cb9-c7ea48fa7f08",
+            "name": "Wait",
+            "webhookId": "7b17b997-9c62-4f3b-85c4-b71c21bff6db"
+        },
+        {
+            "parameters": {
+                "jsCode": "const staticData = $getWorkflowStaticData('global');\n\n// 1. 쌓아둔 데이터 가져오기\nconst finalData = staticData.all_reviews || [];\n\n// 2. 다음 레포지토리를 위해 메모리 초기화 (매우 중요!)\nstaticData.all_reviews = [];\n\n// 3. 현재 레포지토리 정보 가져오기 (파일명 생성용)\n// Repo Loop 노드가 실행된 데이터를 참조\nconst currentRepo = $('Repo Loop').item.json.repositories; \n// 혹은 currentRepo = $node[\"Repo Loop\"].json.repositories;\n\n// 4. 2차 AI에게 넘겨줄 형태로 출력\nreturn [{\n  json: {\n    repo_name: currentRepo.split('/')[1], // 'owner/repo' 에서 'repo'만 추출\n    full_data: JSON.stringify(finalData)\n  }\n}];"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [528, -128],
+            "id": "68155c7b-cf25-499c-837f-1c6ccdfee1df",
+            "name": "Merger & Reset"
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "=<System Prompt>\n{{ $('Get Prompt 2').item.json.body }}\n</System Prompt>\n\n<Input Data (All Aggregated Reviews)>\n{{ $json.full_data }}\n</Input Data (All Aggregated Reviews)>\n\n<Instruction>\n위 System Prompt에 정의된 역할(Technical Analyst)에 따라, 위 Input Data를 분석하여 \"기술 구현 전략 비교 보고서\"를 마크다운 포맷으로 작성해줘.\n사족 없이 보고서 본문만 출력할 것.\n</Instruction>",
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "typeVersion": 3,
+            "position": [688, -128],
+            "id": "a5cee9b9-a724-4bd8-b7d7-4d67a24d5395",
+            "name": "Stage 2 - Analyst1",
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "modelName": "models/gemini-pro-latest",
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+            "typeVersion": 1,
+            "position": [688, -304],
+            "id": "9e9c1557-c34a-48b4-b794-6d96f664f712",
+            "name": "Google Gemini Chat Model1",
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "kgpIrrpkT3FMVq10",
+                    "name": "Google Gemini(PaLM) Api account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "resource": "file",
+                "owner": {
+                    "__rl": true,
+                    "value": "Tapha-K",
+                    "mode": "list",
+                    "cachedResultName": "Tapha-K",
+                    "cachedResultUrl": "https://github.com/Tapha-K"
+                },
+                "repository": {
+                    "__rl": true,
+                    "value": "backtesting-Tapha-K",
+                    "mode": "list",
+                    "cachedResultName": "backtesting-Tapha-K",
+                    "cachedResultUrl": "https://github.com/Tapha-K/backtesting-Tapha-K"
+                },
+                "filePath": "reports/{{ $json.repo_name }}_REVIEW.md",
+                "fileContent": "={{ $json.output }}",
+                "commitMessage": "=chore: update technical review for {{ $json.repo_name }}"
+            },
+            "type": "n8n-nodes-base.github",
+            "typeVersion": 1.1,
+            "position": [1040, -128],
+            "id": "748ca0d0-ed34-401d-91f1-d25f5cca7fb8",
+            "name": "Create Report",
+            "webhookId": "99d8e15e-2068-4739-a3b6-ec3523bca493",
+            "credentials": {
+                "githubApi": {
+                    "id": "XqB4QWpOo5FTfFG2",
+                    "name": "GitHub account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// 분석할 레포지토리 목록\nconst repos = [\n  \"boostcampwm-snu-2025/bye2money\",\n  \"boostcampwm-snu-2025/aiblog\"\n];\n\n// n8n이 이해할 수 있게 '각각 별도의 아이템'으로 쪼개서 리턴합니다.\nreturn repos.map(repo => {\n  return {\n    json: {\n      repositories: repo\n    }\n  };\n});"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [112, -32],
+            "id": "c7469c65-afa9-4151-94e6-5d1a5805b2df",
+            "name": "Set Repos"
+        },
+        {
+            "parameters": {
+                "jsonSchemaExample": "[\n  {\n    \"feature\": \"외부 데이터 수집\",\n    \"issue\": \"API 속도 저하 문제\",\n    \"approaches\": [\n      {\n        \"method\": \"동기 호출\",\n        \"proponent\": \"Reviewee\",\n        \"pros\": \"구현 간단\",\n        \"cons\": \"느림\"\n      }\n    ],\n    \"winning_strategy\": \"비동기 호출\",\n    \"reason\": \"성능 개선을 위해 필수\"\n  }\n]"
+            },
+            "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+            "typeVersion": 1.3,
+            "position": [1808, -32],
+            "id": "8aa96f84-1774-45f9-980f-5f392c1e82a2",
+            "name": "Structured Output Parser"
+        }
+    ],
+    "connections": {
+        "When clicking ‘Execute workflow’": {
+            "main": [
+                [
+                    {
+                        "node": "Get Prompt 1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Prompt 1": {
+            "main": [
+                [
+                    {
+                        "node": "Get Prompt 2",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Prompt 2": {
+            "main": [
+                [
+                    {
+                        "node": "Set Repos",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Number Generator": {
+            "main": [
+                [
+                    {
+                        "node": "PR Number Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Repo Loop": {
+            "main": [
+                [
+                    {
+                        "node": "Merger & Reset",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Number Generator",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "PR Number Loop": {
+            "main": [
+                [
+                    {
+                        "node": "Repo Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Check PR Existence",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Check PR Existence": {
+            "main": [
+                [
+                    {
+                        "node": "Is Valid PR?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Is Valid PR?": {
+            "main": [
+                [
+                    {
+                        "node": "Mining",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "PR Number Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Mining": {
+            "main": [
+                [
+                    {
+                        "node": "Miner - Stage 1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Google Gemini Chat Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "Miner - Stage 1",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Miner - Stage 1": {
+            "main": [
+                [
+                    {
+                        "node": "Accumulator",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Accumulator": {
+            "main": [
+                [
+                    {
+                        "node": "Wait",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Wait": {
+            "main": [
+                [
+                    {
+                        "node": "PR Number Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Merger & Reset": {
+            "main": [
+                [
+                    {
+                        "node": "Stage 2 - Analyst1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Stage 2 - Analyst1": {
+            "main": [
+                [
+                    {
+                        "node": "Create Report",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Google Gemini Chat Model1": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "Stage 2 - Analyst1",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Create Report": {
+            "main": [
+                [
+                    {
+                        "node": "Repo Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Set Repos": {
+            "main": [
+                [
+                    {
+                        "node": "Repo Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Structured Output Parser": {
+            "ai_outputParser": [
+                [
+                    {
+                        "node": "Miner - Stage 1",
+                        "type": "ai_outputParser",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "78f402ae0a165fde4d6f970c53750b5991d3bf8c5c7b152cc699992b805f7afe"
+    }
+}
