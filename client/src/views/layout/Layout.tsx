@@ -5,12 +5,15 @@ export const Layout: React.FC = () => {
     const location = useLocation();
 
     const getLinkClass = (path: string) => {
-        // 반응형 관련 클래스 제거하고 고정 사이즈/색상만 유지
         const baseClass =
-            "px-6 py-2.5 font-bold text-lg rounded-lg transition-colors duration-200";
-        const activeClass = "bg-blue-600 text-white shadow-md"; // 활성: 진한 파란색
+            "px-6 py-2.5 font-bold text-lg rounded-lg transition-all duration-200";
+
+        // 활성 상태: 파란색 배경 (유지)
+        const activeClass = "bg-blue-600 text-white shadow-md";
+
+        // 비활성 상태: (수정됨) 글자를 진하게, 호버 시 배경을 더 진한 회색으로
         const inactiveClass =
-            "text-slate-500 hover:bg-slate-100 hover:text-slate-700"; // 비활성: 회색
+            "text-slate-600 hover:bg-slate-200 hover:text-slate-900";
 
         return location.pathname === path
             ? `${baseClass} ${activeClass}`

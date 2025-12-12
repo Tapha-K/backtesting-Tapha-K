@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "./views/layout/Layout";
 import { MainPage } from "./views/pages/homepage/MainPage";
 import { ArchivePage } from "./views/pages/archivepage/ArchivePage";
-import "./App.css";
 
 function App() {
     return (

@@ -1,15 +1,39 @@
 @import "tailwindcss";
 
+/* 기본 설정 */
+:root {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue",
+        sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+
+    /* 강제로 라이트 모드 고정 (다크모드 색상 제거) */
+    color-scheme: light;
+    color: #1f2937; /* slate-800 정도의 진한 회색 */
+    background-color: #ffffff;
+
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
 body {
     margin: 0;
     padding: 0;
+    min-width: 320px;
+    min-height: 100vh;
+
     /* 앱 바깥 배경색 (어두운 회색) */
     background-color: #e5e7eb;
-    /* 가로 스크롤 생김 방지하되, 1440px보다 작으면 스크롤 허용 */
+
+    /* 중앙 정렬 방지 및 가로 스크롤 처리 */
+    display: block; /* 중요: flex 제거 */
     overflow-x: auto;
 }
 
-/* 스크롤바 커스텀 (선택사항 - 깔끔하게 보이게) */
+/* 스크롤바 커스텀 */
 ::-webkit-scrollbar {
     width: 8px;
 }
@@ -22,72 +46,4 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
-}
-:root {
-    font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-    line-height: 1.5;
-    font-weight: 400;
-
-    color-scheme: light dark;
-    color: rgba(255, 255, 255, 0.87);
-    background-color: #242424;
-
-    font-synthesis: none;
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-    font-weight: 500;
-    color: #646cff;
-    text-decoration: inherit;
-}
-a:hover {
-    color: #535bf2;
-}
-
-body {
-    margin: 0;
-    display: flex;
-    place-items: center;
-    min-width: 320px;
-    min-height: 100vh;
-}
-
-h1 {
-    font-size: 3.2em;
-    line-height: 1.1;
-}
-
-button {
-    border-radius: 8px;
-    border: 1px solid transparent;
-    padding: 0.6em 1.2em;
-    font-size: 1em;
-    font-weight: 500;
-    font-family: inherit;
-    background-color: #1a1a1a;
-    cursor: pointer;
-    transition: border-color 0.25s;
-}
-button:hover {
-    border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-    outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-    :root {
-        color: #213547;
-        background-color: #ffffff;
-    }
-    a:hover {
-        color: #747bff;
-    }
-    button {
-        background-color: #f9f9f9;
-    }
 }
