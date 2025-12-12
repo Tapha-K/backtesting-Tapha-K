@@ -5,6 +5,8 @@ import { ParameterSection } from "./ParameterSection";
 import { PromptSection } from "./PromptSection";
 import { ResultSection } from "./ResultSection";
 import { Button } from "../../../components/Button";
+import { Modal } from "../../../components/Modal";
+import { SaveModal } from "./SaveModal";
 import {
     type StrategyConfig,
     type Parameter,
@@ -61,6 +63,10 @@ export const MainPage: React.FC = () => {
     const [result, setResult] = useState<BacktestResult | null>(null);
     const [isRunning, setIsRunning] = useState(false); // 백테스팅 로딩 상태
 
+    // 모달 상태 추가
+    const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+    const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+
     // 2. AI 요청 핸들러
     const handleGenerateStrategy = async (prompt: string) => {
         try {
@@ -116,6 +122,39 @@ export const MainPage: React.FC = () => {
             alert("백테스팅 실행 실패");
         } finally {
             setIsRunning(false);
+        }
+    };
+
+    // ✅ 저장 핸들러 (서버로 전송)
+    const handleSaveStrategy = async (name: string, description: string) => {
+        if (!result) return;
+
+        try {
+            const payload = {
+                name,
+                description,
+                config: { period, market, parameters }, // 현재 설정값
+                result, // 현재 결과값
+            };
+
+            const response = await fetch(
+                "http://localhost:3000/api/strategies",
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                }
+            );
+
+            if (response.ok) {
+                setIsSaveModalOpen(false); // 모달 닫고
+                setIsSuccessModalOpen(true); // 성공 알림 모달 열기
+            } else {
+                alert("저장에 실패했습니다.");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("서버 오류 발생");
         }
     };
 
@@ -178,6 +217,7 @@ export const MainPage: React.FC = () => {
                 </div>
 
                 <div className="flex-1 bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-[500px]">
+                    {/* 헤더 부분 수정: 저장 버튼 추가 */}
                     <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
                         <div className="flex items-center gap-2">
                             <span className="text-xl">📊</span>
@@ -185,17 +225,63 @@ export const MainPage: React.FC = () => {
                                 Backtest Results
                             </h2>
                         </div>
-                        <span className="text-sm text-slate-400">
-                            {result
-                                ? "Analysis Complete"
-                                : "Waiting for execution..."}
-                        </span>
+
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm text-slate-400">
+                                {result
+                                    ? "Analysis Complete"
+                                    : "Waiting for execution..."}
+                            </span>
+
+                            {/* ✅ 저장 버튼: 결과가 있을 때만 보임 */}
+                            {result && (
+                                <Button
+                                    variant="secondary"
+                                    className="text-xs py-1.5 px-3 border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100"
+                                    onClick={() => setIsSaveModalOpen(true)}
+                                >
+                                    💾 Save Strategy
+                                </Button>
+                            )}
+                        </div>
                     </div>
 
-                    {/* 결과 섹션에 데이터 전달 */}
                     <ResultSection result={result} isLoading={isRunning} />
                 </div>
             </div>
+
+            {/* 1. 저장 입력 폼 모달 */}
+            <SaveModal
+                isOpen={isSaveModalOpen}
+                onClose={() => setIsSaveModalOpen(false)}
+                onSave={handleSaveStrategy}
+            />
+
+            {/* 2. ✅ 성공 알림 모달 (작은 사이즈) */}
+            <Modal
+                isOpen={isSuccessModalOpen}
+                onClose={() => setIsSuccessModalOpen(false)}
+                title="알림"
+                size="sm" // 작게 설정
+                footer={
+                    <Button
+                        variant="primary"
+                        onClick={() => setIsSuccessModalOpen(false)}
+                    >
+                        확인
+                    </Button>
+                }
+            >
+                <div className="text-center py-4">
+                    <div className="text-4xl mb-3">🎉</div>
+                    <p className="font-bold text-slate-800 text-lg">
+                        저장되었습니다!
+                    </p>
+                    <p className="text-slate-500 text-sm mt-1">
+                        'My Strategies' 탭에서 확인하실 수 있습니다.
+                    </p>
+                </div>
+            </Modal>
         </div>
     );
 };

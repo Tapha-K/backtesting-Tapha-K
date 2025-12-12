@@ -30,3 +30,13 @@ export interface BacktestResult {
     };
     chartData: { date: string; value: number }[];
 }
+
+// 4. 저장된 전략 데이터 구조
+export interface SavedStrategy {
+    id: string;
+    name: string;
+    description: string;
+    config: StrategyConfig;
+    result: BacktestResult;
+    createdAt: string;
+}

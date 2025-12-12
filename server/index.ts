@@ -1,104 +1,118 @@
+// server/index.ts
+
 import express from "express";
 import cors from "cors";
+import { MOCK_DATA } from "./mockData";
 
 const app = express();
 const PORT = 3000;
 
-app.use(cors()); // 프론트엔드(5173)와 통신 허용
+app.use(cors());
 app.use(express.json());
 
-// ✅ 2단계 핵심: AI 파라미터 파싱 (Mock)
+// 0. 전략 저장소 (기존 유지)
+let savedStrategies: any[] = [];
+
+// ---------------------------------------------------------
+
+// ✅ 1. AI 파라미터 파싱 API (스마트 매칭 적용)
 app.post("/api/ai/parse", (req, res) => {
     const { prompt } = req.body;
-
     console.log(`[Server] AI 요청 받음: "${prompt}"`);
 
-    // 실제로는 여기서 OpenAI API를 호출하겠지만, 지금은 하드코딩된 응답을 보냅니다.
-    const mockResponse = {
-        period: {
-            startDate: "2023-01-01",
-            endDate: "2023-12-31",
-        },
-        market: {
-            type: "NASDAQ",
-            sectors: ["반도체", "AI", "소프트웨어"],
-        },
-        parameters: [
-            {
-                id: "ma_short",
-                category: "Trend",
-                label: "단기 이동평균(MA)",
-                value: 5,
-                unit: "일",
-                description: "골든크로스 진입용",
-            },
-            {
-                id: "ma_long",
-                category: "Trend",
-                label: "장기 이동평균(MA)",
-                value: 60,
-                unit: "일",
-                description: "추세 판단용 (20->60 변경됨)",
-            },
-            {
-                id: "rsi_buy",
-                category: "Oscillator",
-                label: "RSI 매수",
-                value: 30,
-                unit: "이하",
-                description: "과매도 구간",
-            },
-            {
-                id: "stop_loss",
-                category: "Risk",
-                label: "손절",
-                value: 3,
-                unit: "%",
-                description: "타이트한 손절 관리",
-            },
-        ],
-    };
+    // 1) 프롬프트에 키워드가 포함된 시나리오 찾기
+    const matchedScenario = MOCK_DATA.find((scenario) =>
+        scenario.keywords.some((keyword) => prompt.includes(keyword))
+    );
 
-    // 1.5초 딜레이를 줘서 "생성 중..." 느낌 내기
+    // 2) 매칭된 게 없으면 기본값(골든크로스) 반환
+    const responseData = matchedScenario
+        ? matchedScenario.config
+        : MOCK_DATA[0].config;
+
     setTimeout(() => {
-        res.json(mockResponse);
+        res.json(responseData);
+    }, 1000); // 반응 속도 좀 빠르게 1초로 단축
+});
+
+// ✅ 2. 백테스팅 실행 API (파라미터 기반 매칭)
+app.post("/api/backtest/run", (req, res) => {
+    const config = req.body; // 프론트에서 보낸 설정값
+
+    // 설정값 안에 있는 파라미터 ID를 보고 어떤 전략인지 역추적
+    // (실제로는 계산하겠지만, Mock에서는 이렇게 매칭합니다)
+    const paramIds = config.parameters.map((p: any) => p.id);
+
+    const matchedScenario = MOCK_DATA.find((scenario) =>
+        // 시나리오의 파라미터 ID 중 하나라도 포함되어 있으면 해당 결과 반환
+        scenario.config.parameters.some((p: any) => paramIds.includes(p.id))
+    );
+
+    const resultData = matchedScenario
+        ? matchedScenario.result
+        : MOCK_DATA[0].result;
+
+    console.log(
+        `[Server] 백테스팅 실행 (매칭된 전략: ${
+            matchedScenario?.id || "default"
+        })`
+    );
+
+    setTimeout(() => {
+        res.json(resultData);
     }, 1500);
 });
 
-// ✅ 3단계: 백테스팅 실행 API (Mock)
-app.post("/api/backtest/run", (req, res) => {
-    const strategy = req.body;
+// ✅ 3. AI 분석 API (New! 프론트 모달에서 호출용)
+app.post("/api/ai/analyze", (req, res) => {
+    const { config } = req.body; // 전략 설정을 받음
 
-    console.log(`[Server] 백테스팅 시작... 전략:`, strategy.market.type);
+    const paramIds = config.parameters.map((p: any) => p.id);
+    const matchedScenario = MOCK_DATA.find((scenario) =>
+        scenario.config.parameters.some((p: any) => paramIds.includes(p.id))
+    );
 
-    // 더미 결과 데이터 생성
-    const mockResult = {
-        stats: {
-            totalReturn: 15.4, // 수익률
-            winRate: 65.2, // 승률
-            mdd: -12.5, // 최대 낙폭
-        },
-        // 차트용 시계열 데이터 (간단하게 10개만)
-        chartData: [
-            { date: "2023-01", value: 100 },
-            { date: "2023-02", value: 102 },
-            { date: "2023-03", value: 98 },
-            { date: "2023-04", value: 105 },
-            { date: "2023-05", value: 108 },
-            { date: "2023-06", value: 115 },
-            { date: "2023-07", value: 112 },
-            { date: "2023-08", value: 120 },
-            { date: "2023-09", value: 125 },
-            { date: "2023-10", value: 130 },
-        ],
-    };
+    const analysisText = matchedScenario
+        ? matchedScenario.analysis
+        : MOCK_DATA[0].analysis;
 
-    // 2초 딜레이 (계산하는 척)
+    console.log(`[Server] AI 분석 요청`);
+
     setTimeout(() => {
-        res.json(mockResult);
+        res.json({ analysis: analysisText });
     }, 2000);
 });
 
+// ---------------------------------------------------------
+// (기존 전략 저장/삭제/조회 API는 그대로 유지)
+
+// 전략 저장
+app.post("/api/strategies", (req, res) => {
+    const { name, description, config, result } = req.body;
+    const newStrategy = {
+        id: Date.now().toString(),
+        name,
+        description,
+        config,
+        result,
+        createdAt: new Date().toISOString(),
+    };
+    savedStrategies.push(newStrategy);
+    res.json({ success: true, strategy: newStrategy });
+});
+
+// 전략 목록 조회
+app.get("/api/strategies", (req, res) => {
+    res.json(savedStrategies);
+});
+
+// 전략 삭제
+app.delete("/api/strategies/:id", (req, res) => {
+    const { id } = req.params;
+    savedStrategies = savedStrategies.filter((s) => s.id !== id);
+    res.json({ success: true });
+});
+
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`✅ Server running on http://localhost:${PORT}`);
 });
