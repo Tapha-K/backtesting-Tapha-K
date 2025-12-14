@@ -34,7 +34,7 @@ export const ArchivePage: React.FC = () => {
         fetchStrategies();
     }, []);
 
-    // ✅ 삭제 핸들러 (서버 요청)
+    // 삭제 핸들러 (서버 요청)
     const handleDeleteConfirm = async () => {
         if (!deleteTargetId) return;
 
@@ -112,9 +112,14 @@ export const ArchivePage: React.FC = () => {
                         </button>
 
                         {/* 카드 내용 (기존 동일) */}
-                        <div className="flex justify-between items-center mb-2">
-                            <span className="text-xs font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded">
-                                {formatDate(strategy.createdAt)}
+                        <div className="flex flex-col gap-1 mb-3">
+                            <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded w-fit">
+                                Created: {formatDate(strategy.createdAt)}
+                            </span>
+                            {/* 기간 표시 추가 */}
+                            <span className="text-[10px] text-slate-500 ml-1">
+                                📅 {strategy.config.period.startDate} ~{" "}
+                                {strategy.config.period.endDate}
                             </span>
                         </div>
 

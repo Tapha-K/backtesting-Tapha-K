@@ -2,10 +2,19 @@
 
 import express from "express";
 import cors from "cors";
-import { MOCK_DATA } from "./mockData";
+import dotenv from "dotenv";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { ANALYSIS_SYSTEM_PROMPT, generateAnalysisPrompt } from "./data/prompts";
+import { MOCK_DATA } from "./data/mockData";
+
+dotenv.config();
 
 const app = express();
 const PORT = 3000;
+
+// Gemini 클라이언트 초기화
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 app.use(cors());
 app.use(express.json());
@@ -64,27 +73,39 @@ app.post("/api/backtest/run", (req, res) => {
 });
 
 // ✅ 3. AI 분석 API (New! 프론트 모달에서 호출용)
-app.post("/api/ai/analyze", (req, res) => {
-    const { config } = req.body; // 전략 설정을 받음
+app.post("/api/ai/analyze", async (req, res) => {
+    try {
+        // 클라이언트가 전략 설정(config)과 결과(result)를 모두 보내줘야 함
+        const { config, result } = req.body;
 
-    const paramIds = config.parameters.map((p: any) => p.id);
-    const matchedScenario = MOCK_DATA.find((scenario) =>
-        scenario.config.parameters.some((p: any) => paramIds.includes(p.id))
-    );
+        console.log(
+            `[Server] Gemini 분석 요청 시작... (${config.period.startDate} ~ ${config.period.endDate})`
+        );
 
-    const analysisText = matchedScenario
-        ? matchedScenario.analysis
-        : MOCK_DATA[0].analysis;
+        // 1. 시스템 프롬프트 + 사용자 데이터 결합
+        const userPrompt = generateAnalysisPrompt(config, result);
+        const finalPrompt = `${ANALYSIS_SYSTEM_PROMPT}\n\n${userPrompt}`;
 
-    console.log(`[Server] AI 분석 요청`);
+        // 2. Gemini 호출
+        const aiResult = await model.generateContent(finalPrompt);
+        const response = await aiResult.response;
+        const text = response.text();
 
-    setTimeout(() => {
-        res.json({ analysis: analysisText });
-    }, 2000);
+        console.log(`[Server] 분석 완료!`);
+
+        // 3. 결과 반환
+        res.json({ analysis: text });
+    } catch (error) {
+        console.error("Gemini API Error:", error);
+
+        // 에러 발생 시 Fallback (기존 Mock 데이터 활용)
+        console.log("[Server] API 호출 실패로 Mock 데이터 반환");
+        res.json({
+            analysis:
+                "⚠️ **AI 분석 서버 연결 지연**\n\n현재 사용량이 많아 실시간 분석이 어렵습니다. 잠시 후 다시 시도해주세요.\n(API Key 설정을 확인해주세요.)",
+        });
+    }
 });
-
-// ---------------------------------------------------------
-// (기존 전략 저장/삭제/조회 API는 그대로 유지)
 
 // 전략 저장
 app.post("/api/strategies", (req, res) => {

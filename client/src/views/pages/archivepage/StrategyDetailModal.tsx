@@ -19,26 +19,33 @@ export const StrategyDetailModal: React.FC<Props> = ({
 
     if (!strategy) return null;
 
-    // AI 분석 요청 핸들러 (Mock)
+    // AI 분석 요청 핸들러
     const handleAnalyze = async () => {
         setIsAnalyzing(true);
 
         try {
-            // 서버에 분석 요청 (현재 전략 설정을 보냄)
+            if (!strategy) return; // 방어 코드
+
+            // config 뿐만 아니라 result(수익률 등)도 함께 전송
+            const payload = {
+                config: strategy.config,
+                result: strategy.result,
+            };
+
             const response = await fetch(
                 "http://localhost:3000/api/ai/analyze",
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ config: strategy.config }),
+                    body: JSON.stringify(payload), // payload 전송
                 }
             );
 
             const data = await response.json();
-            setAiAnalysis(data.analysis); // 서버가 준 텍스트로 설정
+            setAiAnalysis(data.analysis);
         } catch (error) {
             console.error(error);
-            setAiAnalysis("분석에 실패했습니다.");
+            setAiAnalysis("분석 요청 중 오류가 발생했습니다.");
         } finally {
             setIsAnalyzing(false);
         }
@@ -65,9 +72,16 @@ export const StrategyDetailModal: React.FC<Props> = ({
             <div className="flex flex-col gap-6 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
                 {/* 1. 기본 설명 */}
                 <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                    <h4 className="text-sm font-bold text-slate-500 mb-2">
-                        DESCRIPTION
-                    </h4>
+                    <div className="flex justify-between items-start mb-2">
+                        <h4 className="text-sm font-bold text-slate-500">
+                            SUMMARY
+                        </h4>
+                        {/* 분석 기간 표시 */}
+                        <span className="text-xs font-bold text-slate-500 bg-white border border-slate-200 px-2 py-1 rounded-md shadow-sm">
+                            📅 기간: {strategy.config.period.startDate} ~{" "}
+                            {strategy.config.period.endDate}
+                        </span>
+                    </div>
                     <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">
                         {strategy.description || "작성된 설명이 없습니다."}
                     </p>
